@@ -81,7 +81,8 @@ class DirectVisualLidarCalibrationConan(ConanFile):
     def requirements(self):
         self.requires("eigen/3.4.0")
         self.requires("ceres-solver/2.2.0")
-        self.requires("opencv/4.10.0")
+        # require 4 >= opencv < 5 because opencv 5 has many API changes
+        self.requires("opencv/[>=4.0.0 <5.0.0]")
         self.requires("boost/1.83.0")
         if self.options.build_vlcal_preprocess:
             self.requires("gtsam/4.3a1")

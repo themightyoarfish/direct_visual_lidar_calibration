@@ -57,8 +57,13 @@ if(BUILD_VLCAL_ALIGN)
     src/vlcal/calib/view_culling.cpp
     src/vlcal/calib/visual_camera_calibration.cpp
   )
-  target_include_directories(vlcal_align PUBLIC ${VLCAL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
-  target_link_libraries(vlcal_align PUBLIC Eigen3::Eigen ${OpenCV_LIBS} Boost::filesystem PRIVATE Ceres::ceres)
+  target_include_directories(vlcal_align PUBLIC ${VLCAL_INCLUDE_DIRS})
+  target_link_libraries(vlcal_align PUBLIC
+    Eigen3::Eigen
+    opencv_core
+    opencv_imgproc
+    Boost::filesystem
+    PRIVATE Ceres::ceres)
   if(OPENMP_FOUND)
     target_link_libraries(vlcal_align PUBLIC OpenMP::OpenMP_CXX)
   endif()
