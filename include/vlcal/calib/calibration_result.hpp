@@ -11,6 +11,7 @@ enum class CalibrationError {
   EmptyDataset,
   EmptyPointCloud,
   OptimizationFailed,
+  Cancelled,
 };
 
 struct CalibrationProgress {

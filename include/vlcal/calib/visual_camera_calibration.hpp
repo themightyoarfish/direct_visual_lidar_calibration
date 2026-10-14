@@ -46,6 +46,8 @@ public:
   double nelder_mead_convergence_criteria;
 
   std::function<void(const CalibrationProgress&)> on_progress;
+  /// When set, return true if calibration should stop as soon as practical.
+  std::function<bool()> is_cancelled;
 };
 
 class VisualCameraCalibration {

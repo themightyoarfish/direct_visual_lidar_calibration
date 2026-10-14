@@ -1,5 +1,6 @@
 #pragma once
 
+#include <functional>
 #include <numeric>
 #include <dfo/optimizer.hpp>
 
@@ -19,6 +20,7 @@ public:
 
     int max_iterations;
     double convergence_var_thresh;
+    std::function<bool()> should_stop;
   };
 
   using typename Optimizer<N>::Result;
@@ -47,6 +49,9 @@ public:
 
 
     for(int i=0; i<params.max_iterations; i++) {
+      if (params.should_stop && params.should_stop()) {
+        break;
+      }
       result.num_iterations = i;
       std::sort(x.begin(), x.end(), [=](const VectorM& lhs, const VectorM& rhs) { return lhs[0] < rhs[0]; });
       if (is_converged(x)) {

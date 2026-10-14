@@ -64,6 +64,11 @@ CalibrationResult VisualCameraCalibration::calibrate(const Eigen::Isometry3d& in
   result.T_camera_lidar = T_camera_lidar;
 
   for (int outer = 0; outer < params.max_outer_iterations; ++outer) {
+    if (params.is_cancelled && params.is_cancelled()) {
+      result.error = CalibrationError::Cancelled;
+      result.message = "cancelled";
+      return result;
+    }
     CalibrationResult inner;
     switch (params.registration_type) {
       case RegistrationType::NID_BFGS:
@@ -80,6 +85,11 @@ CalibrationResult VisualCameraCalibration::calibrate(const Eigen::Isometry3d& in
 
     if (inner.error != CalibrationError::Ok) {
       return inner;
+    }
+    if (params.is_cancelled && params.is_cancelled()) {
+      result.error = CalibrationError::Cancelled;
+      result.message = "cancelled";
+      return result;
     }
 
     const Eigen::Isometry3d delta = inner.T_camera_lidar.inverse() * T_camera_lidar;
@@ -120,6 +130,9 @@ CalibrationResult VisualCameraCalibration::estimate_pose_nelder_mead(const Eigen
   double best_cost = std::numeric_limits<double>::max();
 
   const auto f = [&](const Eigen::Matrix<double, 6, 1>& x) {
+    if (params.is_cancelled && params.is_cancelled()) {
+      return best_cost;
+    }
     const Eigen::Isometry3d T_camera_lidar = init_T_camera_lidar * expmap_delta(x);
     double sum_costs = 0.0;
 
@@ -146,8 +159,15 @@ CalibrationResult VisualCameraCalibration::estimate_pose_nelder_mead(const Eigen
   nelder_mead_params.init_step = params.nelder_mead_init_step;
   nelder_mead_params.convergence_var_thresh = params.nelder_mead_convergence_criteria;
   nelder_mead_params.max_iterations = params.max_inner_iterations;
+  nelder_mead_params.should_stop = params.is_cancelled;
   dfo::NelderMead<6> optimizer(nelder_mead_params);
   auto opt = optimizer.optimize(f, Eigen::Matrix<double, 6, 1>::Zero());
+
+  if (params.is_cancelled && params.is_cancelled()) {
+    result.error = CalibrationError::Cancelled;
+    result.message = "cancelled";
+    return result;
+  }
 
   result.T_camera_lidar = init_T_camera_lidar * expmap_delta(opt.x);
   result.final_cost = opt.y;
@@ -237,20 +257,31 @@ CalibrationResult VisualCameraCalibration::estimate_pose_bfgs(const Eigen::Isome
   options.line_search_direction_type = ceres::BFGS;
   options.max_num_iterations = params.max_inner_iterations;
 
-  if (params.on_progress) {
+  if (params.on_progress || params.is_cancelled) {
     options.callbacks.emplace_back(new IterationCallbackWrapper([&](const ceres::IterationSummary& summary) {
-      CalibrationProgress progress;
-      progress.outer_iteration = outer_iteration;
-      progress.inner_iteration = static_cast<int>(summary.iteration);
-      progress.cost = summary.cost;
-      progress.T_camera_lidar = Eigen::Isometry3d(T_camera_lidar.matrix());
-      params.on_progress(progress);
+      if (params.is_cancelled && params.is_cancelled()) {
+        return ceres::CallbackReturnType::SOLVER_ABORT;
+      }
+      if (params.on_progress) {
+        CalibrationProgress progress;
+        progress.outer_iteration = outer_iteration;
+        progress.inner_iteration = static_cast<int>(summary.iteration);
+        progress.cost = summary.cost;
+        progress.T_camera_lidar = Eigen::Isometry3d(T_camera_lidar.matrix());
+        params.on_progress(progress);
+      }
       return ceres::CallbackReturnType::SOLVER_CONTINUE;
     }));
   }
 
   ceres::GradientProblemSolver::Summary summary;
   ceres::Solve(options, problem, T_camera_lidar.data(), &summary);
+
+  if (params.is_cancelled && params.is_cancelled()) {
+    result.error = CalibrationError::Cancelled;
+    result.message = "cancelled";
+    return result;
+  }
 
   if (!summary.IsSolutionUsable()) {
     result.error = CalibrationError::OptimizationFailed;

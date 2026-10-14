@@ -75,6 +75,20 @@ TEST(VisualCalibration, ProgressCallbackNoOp) {
   EXPECT_EQ(result.error, vlcal::CalibrationError::Ok);
 }
 
+TEST(VisualCalibration, CancelledBeforeStart) {
+  auto data = make_synthetic_pair(0.0);
+  const auto proj = camera::create_camera(
+    "plumb_bob",
+    {static_cast<double>(data->image.cols), static_cast<double>(data->image.rows), data->image.cols / 2.0, data->image.rows / 2.0},
+    {});
+  vlcal::VisualCameraCalibrationParams params;
+  params.max_outer_iterations = 10;
+  params.is_cancelled = []() { return true; };
+  vlcal::VisualCameraCalibration calib(proj, {data}, params);
+  const auto result = calib.calibrate(Eigen::Isometry3d::Identity());
+  EXPECT_EQ(result.error, vlcal::CalibrationError::Cancelled);
+}
+
 TEST(ScanTime, AzimuthWindowRequiresDuration) {
   vlcal::ScanTimeParams params;
   params.time_origin = vlcal::TimeOrigin::ScanStart;
