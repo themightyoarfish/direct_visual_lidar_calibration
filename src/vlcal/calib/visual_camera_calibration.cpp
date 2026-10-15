@@ -121,6 +121,7 @@ CalibrationResult VisualCameraCalibration::estimate_pose_nelder_mead(const Eigen
     auto culled_points = view_culling.cull(data->points, init_T_camera_lidar);
     const cv::Mat gray = to_grayscale(data->image);
     auto new_data = std::make_shared<VisualLiDARData>(gray, culled_points);
+    new_data->image_mask = data->image_mask;
 
     NIDCostParams nid_params;
     nid_params.bins = params.nid_bins;
@@ -240,7 +241,8 @@ CalibrationResult VisualCameraCalibration::estimate_pose_bfgs(const Eigen::Isome
     cv::Mat normalized_image;
     gray.convertTo(normalized_image, CV_64FC1, 1.0 / 255.0);
 
-    nid_costs.emplace_back(std::make_shared<NIDCost>(proj, normalized_image, culled_points, params.nid_bins));
+    nid_costs.emplace_back(
+      std::make_shared<NIDCost>(proj, normalized_image, culled_points, params.nid_bins, data->image_mask));
   }
 
   auto sum_nid = new MultiNIDCost(T_camera_lidar);

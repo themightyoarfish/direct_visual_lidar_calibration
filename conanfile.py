@@ -47,7 +47,7 @@ def _set_gtsam_dir(tc, conanfile):
 
 class DirectVisualLidarCalibrationConan(ConanFile):
     name = "vlcal_align"
-    version = "0.1.0"
+    version = "0.1.1"
     license = "MIT"
     settings = "os", "compiler", "build_type", "arch"
     options = {

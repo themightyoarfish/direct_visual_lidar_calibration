@@ -4,6 +4,7 @@
 #include <sophus/se3.hpp>
 #include <opencv2/core.hpp>
 #include <vlcal/common/frame.hpp>
+#include <vlcal/common/image_mask.hpp>
 #include <camera/generic_camera_base.hpp>
 
 namespace vlcal {
@@ -20,10 +21,16 @@ double get_real(const double& x) {
 
 class NIDCost {
 public:
-  NIDCost(const camera::GenericCameraBase::ConstPtr& proj, const cv::Mat& normalized_image, const Frame::ConstPtr& points, const int bins = 16)
+  NIDCost(
+    const camera::GenericCameraBase::ConstPtr& proj,
+    const cv::Mat& normalized_image,
+    const Frame::ConstPtr& points,
+    const int bins = 16,
+    const cv::Mat& image_mask = cv::Mat())
   : proj(proj),
     normalized_image(normalized_image.clone()),
     points(points),
+    image_mask(image_mask.empty() ? cv::Mat() : image_mask.clone()),
     bins(bins) {
     //
     spline_coeffs.row(0) << 1.0, -3.0, 3.0, -1.0;
@@ -53,6 +60,11 @@ public:
       const Eigen::Matrix<T, 2, 1> s = projected - knot_i.cast<double>();
 
       if ((knot_i.array() < Eigen::Array2i(0, 0)).any() || (knot_i.array() >= Eigen::Array2i(normalized_image.cols, normalized_image.rows)).any()) {
+        num_outliers++;
+        continue;
+      }
+
+      if (!image_mask_includes_pixel(image_mask, knot_i.x(), knot_i.y())) {
         num_outliers++;
         continue;
       }
@@ -110,6 +122,7 @@ private:
   const camera::GenericCameraBase::ConstPtr proj;
   const cv::Mat normalized_image;
   const Frame::ConstPtr points;
+  const cv::Mat image_mask;
 
   const int bins;
   Eigen::Matrix<double, 4, 4> spline_coeffs;

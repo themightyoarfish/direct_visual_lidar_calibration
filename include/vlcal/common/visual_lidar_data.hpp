@@ -19,6 +19,8 @@ public:
 public:
   cv::Mat image;
   FrameCPU::Ptr points;
+  /// Optional CV_8UC1 mask, same size as `image`; 255 = pixel contributes to NID, 0 = excluded.
+  cv::Mat image_mask;
 };
 
 }  // namespace vlcal

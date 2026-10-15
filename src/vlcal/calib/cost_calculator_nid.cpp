@@ -1,6 +1,7 @@
 #include <vlcal/calib/cost_calculator_nid.hpp>
 
 #include <vlcal/common/estimate_fov.hpp>
+#include <vlcal/common/image_mask.hpp>
 
 namespace vlcal {
 
@@ -37,6 +38,10 @@ double CostCalculatorNID::calculate(const Eigen::Isometry3d& T_camera_lidar) {
     const Eigen::Array2i pt_2d = proj->project(pt_camera.head<3>()).cast<int>();
     if ((pt_2d < Eigen::Array2i::Zero()).any() || (pt_2d >= image_size).any()) {
       // Out of Image
+      continue;
+    }
+
+    if (!image_mask_includes_pixel(data->image_mask, pt_2d.x(), pt_2d.y())) {
       continue;
     }
 
